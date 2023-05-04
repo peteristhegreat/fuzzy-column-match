@@ -2,6 +2,8 @@ import Image from "next/image";
 import { Inter } from "next/font/google";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { useEffect, useState } from "react";
+import { generateOutputColumn } from "@/utils/fuzzySearch";
+import { range } from "lodash";
 
 type Inputs = {
   vlookupColumn: string;
@@ -13,7 +15,8 @@ type Inputs = {
 const inter = Inter({ subsets: ["latin"] });
 
 export default function Home() {
-  // const [rows, setRows] = useState(4);
+  const [outputColumn, setOutputColumn] = useState("");
+  const [closeMatches, setCloseMatches] = useState("");
 
   const {
     register,
@@ -21,7 +24,34 @@ export default function Home() {
     watch,
     formState: { errors },
   } = useForm<Inputs>();
-  const onSubmit: SubmitHandler<Inputs> = (data) => console.log(data);
+  const onSubmit: SubmitHandler<Inputs> = (data) => {
+    console.log(data);
+    console.log("Data in");
+    // @ts-ignore
+    const threshold = parseInt(data.threshold);
+
+    const [oc, cm] = generateOutputColumn(
+      data.vlookupColumn.trim().split("\n"),
+      data.inputColumn.trim().split("\n"),
+      threshold
+    );
+    console.log({ oc, cm });
+    setOutputColumn("1234");
+    setCloseMatches("57689")
+    setOutputColumn(oc.join("\n"));
+    const sortedMatches : string[] = [];
+    range(threshold, Math.min(60, Math.max(threshold - 10, 1)), -1).forEach(
+      (val) => {
+        if (cm[val]) {
+          // @ts-ignore
+          cm[val].forEach(([s1, s2]: [string, string]) => {
+            sortedMatches.push(`${val} - "${s1}" ~ "${s2}"`);
+          });
+        }
+      }
+    );
+    setCloseMatches(sortedMatches.join("\n"));
+  };
 
   const rows = watch("rows", 4);
 
@@ -30,15 +60,16 @@ export default function Home() {
       className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
     >
       <form onSubmit={handleSubmit(onSubmit)}>
-        
         {/* register your input into the hook by invoking the "register" function */}
         <div className="m-3 prose">
-          Using <a href="https://github.com/nol13/fuzzball.js">fuzzball.js</a>{" "}
+          <h1>Fuzzy Column Match</h1>
+          <p>This uses <a href="https://github.com/nol13/fuzzball.js">fuzzball.js</a>{" "}
           aka{" "}
           <a href="https://en.wikipedia.org/wiki/Levenshtein_distance">
             Levenshtein Distance
           </a>{" "}
-          calculation to match up values.
+          calculations to match up values.</p>
+          <p>The input column will be one to one to the output column in row count.</p>
         </div>
         <div className="flex">
           <div className="m-3">
@@ -89,11 +120,8 @@ export default function Home() {
               placeholder="output Column"
               rows={rows || 4}
               className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-              disabled
-              // {...register("inputColumn", { required: true })}
+              value={outputColumn}
             />
-            {/* errors will return when field validation fails  */}
-            {errors["inputColumn"] && <span>This field is required</span>}
           </div>
 
           <div className="p-2">
@@ -127,7 +155,6 @@ export default function Home() {
                 id="rows"
                 placeholder="4 (Optional)"
                 className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                required
                 {...register("rows")}
               />
             </span>
@@ -140,11 +167,27 @@ export default function Home() {
             Go
           </button>
         </div>
+
+        <div className="m-3">
+          <label
+            htmlFor="close-matches"
+            className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+          >
+            Closest Matches
+          </label>
+          <textarea
+            id="close-matches"
+            placeholder="Values nearly matching under the threshold"
+            rows={rows || 4}
+            className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            value={closeMatches}
+          />
+        </div>
       </form>
       <div className="relative flex place-items-center">
         <Image
           className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70]"
-          src="/apple-touch-icon.png"
+          src="/bear.svg"
           alt="Fuzzy Bear"
           width={50}
           height={37}
